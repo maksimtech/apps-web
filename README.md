@@ -1,5 +1,7 @@
 # apps-web
 
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/maksimtech/apps-web?utm_source=badge)
+
 This repository contains all the raw files for building the TrueNAS Apps Portal.
 This site is intended for use as the online hub for information about first- and third- party applications that are available from within TrueNAS.
 
@@ -42,6 +44,15 @@ This is still a work in progress with content from https://www.truenas.com/docs/
 * *static/images* has all the image files used in this site. Note that most images that are visible from catalog/ URLs are dynamically generated from the apps code repository and aren't stored in this repo.
 * *layouts* has all Hugo related html layouts and shortcodes
 * *static/includes* has all the single-sourced text snippets that are called within *resource/* locations
+
+## Build performance
+
+Build times for this site are tracked continuously with [CodSpeed](https://app.codspeed.io/maksimtech/apps-web).
+The measured commands are declared in `codspeed.yml` and run on every pull request by `.github/workflows/codspeed.yml`.
+
+To run them locally, install the [CodSpeed CLI](https://codspeed.io/docs/cli) and run:
+
+    codspeed run -m walltime
 
 ## Contributing
 

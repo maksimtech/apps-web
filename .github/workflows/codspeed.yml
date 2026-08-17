@@ -1,0 +1,50 @@
+name: CodSpeed Benchmarks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC authentication with CodSpeed
+
+env:
+  # Keep in sync with the version documented in README.md
+  HUGO_VERSION: 0.157.0
+  HUGO_ENV: production
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install Hugo Extended
+        run: |
+          curl -sSLf -o /tmp/hugo.tar.gz \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"
+          sudo tar -xzf /tmp/hugo.tar.gz -C /usr/local/bin hugo
+          hugo version
+
+      - name: Prime the Hugo module cache
+        # Downloads the Hugo modules pinned in go.mod and acts as a smoke test:
+        # doing it here keeps module downloads out of the measured commands.
+        run: hugo --renderToMemory
+
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v5
+        with:
+          # Hugo is a Go binary measured as a whole program, so walltime is the
+          # relevant instrument. The benchmarks are defined in codspeed.yml.
+          mode: walltime

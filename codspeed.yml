@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/CodSpeedHQ/codspeed/refs/heads/main/schemas/codspeed.schema.json
+$schema: https://raw.githubusercontent.com/CodSpeedHQ/codspeed/refs/heads/main/schemas/codspeed.schema.json
+
+# Benchmarks for the Hugo build of the TrueNAS Apps Portal.
+# They are measured with the walltime instrument, since `hugo` is a whole
+# program (a Go binary) rather than a library we can call function by function.
+#
+# A build round takes a couple of seconds, so a single warmup round is enough to
+# warm the Hugo module cache and the OS page cache, and the number of measured
+# rounds is bounded to keep the CI job short.
+options:
+  warmup-time: "5s"
+  max-time: "40s"
+  max-rounds: 8
+
+benchmarks:
+  # Production build, identical to what the publishing pipeline runs.
+  - name: "Site build (production, minified)"
+    id: build-minified
+    exec: hugo --gc --minify --cleanDestinationDir -d public
+
+  # Same build without minification, to isolate the cost of the minifier.
+  - name: "Site build (no minification)"
+    id: build-no-minify
+    exec: hugo --gc --cleanDestinationDir -d public
+
+  # Render every page in memory: content parsing plus template execution,
+  # without the cost of writing the ~600 pages and static files to disk.
+  - name: "Site render to memory"
+    id: render-to-memory
+    exec: hugo --renderToMemory
+
+  # Parse all content files and build the page graph, without rendering any
+  # template. Isolates front matter parsing and page assembly.
+  - name: "Content parsing (list all pages)"
+    id: list-all
+    exec: hugo list all
+    options:
+      warmup-time: "2s"
+      max-time: "10s"
