@@ -29,6 +29,31 @@
     {{ $appTitle := $versionData.app_metadata.title | default "App Title" }}
     {{ $appDescription := $versionData.app_metadata.description | default "No description available." }}
     {{ $appIcon := $versionData.app_metadata.icon | default "/images/image-preloader.svg" }}
+
+    <!-- MinIO/AIStor trademark compliance: detect known app slugs -->
+    {{ $trademarkBrand := "" }}
+    {{ $trademarkMinio := false }}
+    {{ $trademarkAistor := false }}
+    {{ if eq $name "minio" }}
+      {{ $trademarkBrand = "MinIO" }}
+      {{ $trademarkMinio = true }}
+    {{ else if eq $name "minio-console" }}
+      {{ $trademarkBrand = "MinIO Console" }}
+      {{ $trademarkMinio = true }}
+    {{ else if eq $name "aistor" }}
+      {{ $trademarkBrand = "AIStor" }}
+      {{ $trademarkAistor = true }}
+    {{ end }}
+    {{ $appTitleDisplay := $appTitle }}
+    {{ if $trademarkBrand }}
+      {{ $appTitleSuffix := strings.TrimPrefix $trademarkBrand $appTitle }}
+      {{ if eq $appTitleSuffix $appTitle }}
+        <!-- $appTitle didn't start with the expected brand string; fall back to the brand name alone rather than guessing -->
+        {{ $appTitleDisplay = printf "%s&trade;" $trademarkBrand }}
+      {{ else }}
+        {{ $appTitleDisplay = printf "%s&trade;%s" $trademarkBrand $appTitleSuffix }}
+      {{ end }}
+    {{ end }}
     {{ $minScaleVersion := $versionData.app_metadata.annotations.min_scale_version | default "" }}
     {{ $changelog := $versionData.app_metadata.changelog_url | default "" }}
     {{ $added := $versionData.app_metadata.date_added | default "" }}
@@ -74,7 +99,7 @@
           <img class="app-card-img" src="{{ $appIcon }}" aria-label="{{ $appTitle }} Logo" onerror="this.onerror=null;this.src='/images/image-preloader.svg';">
         </div>
         <div class="section-tab-content ixprods">
-          <b class="app-title">{{ $appTitle }}</b><br>
+          <b class="app-title">{{ $appTitleDisplay | safeHTML }}</b><br>
           <a class="truenas-appbutton" href="https://www.truenas.com/docs/truenasapps/">Get Started with Apps!</a><br>
           <div class="app-info">
             <small>
@@ -245,7 +270,7 @@
           </div>
 
           {{ if .reason }}
-            <p class="deprecation-reason"><strong>Reason:</strong> {{ .reason | safeHTML }}</p>
+            <p class="deprecation-reason"><strong>Reason:</strong> {{ partial "linkify-urls.html" .reason }}</p>
           {{ end }}
 
           {{ if eq .scope "partial" }}
@@ -401,6 +426,9 @@
       <pre><code>{{ $fileContent }}</code></pre>
     </details>
     <br>
+    {{ if $trademarkBrand }}
+      {{ partial "trademark-notice.html" (dict "minio" $trademarkMinio "aistor" $trademarkAistor) }}
+    {{ end }}
     <hr>
   {{ end }}
 
@@ -421,8 +449,32 @@
     {{ $appName = index $pathParts 2 }}
   {{ end }}
 
-  <!-- Check if app exists in removals data -->
-  {{ $removalInfo := index $removalsData $appName }}
+  <!-- MinIO/AIStor trademark compliance: detect known app slugs -->
+  {{ $trademarkBrand := "" }}
+  {{ $trademarkMinio := false }}
+  {{ $trademarkAistor := false }}
+  {{ if eq $appName "minio" }}
+    {{ $trademarkBrand = "MinIO" }}
+    {{ $trademarkMinio = true }}
+  {{ else if eq $appName "minio-console" }}
+    {{ $trademarkBrand = "MinIO Console" }}
+    {{ $trademarkMinio = true }}
+  {{ else if eq $appName "aistor" }}
+    {{ $trademarkBrand = "AIStor" }}
+    {{ $trademarkAistor = true }}
+  {{ end }}
+
+  <!-- Check if app exists in removals data. app-removals.yaml keys are "<appName>_<train>"
+       (e.g. "minio_stable"), not the bare app name, so build that key from the path.
+       Fall back to the bare name in case any entry doesn't follow that convention. -->
+  {{ $removalsTrain := "" }}
+  {{ if ge (len $pathParts) 2 }}
+    {{ $removalsTrain = index $pathParts 1 }}
+  {{ end }}
+  {{ $removalInfo := index $removalsData (printf "%s_%s" $appName $removalsTrain) }}
+  {{ if not $removalInfo }}
+    {{ $removalInfo = index $removalsData $appName }}
+  {{ end }}
 
   {{ if $removalInfo }}
     <!-- App was removed - show removal banner -->
@@ -432,7 +484,16 @@
         <h2>This app has been removed from the TrueNAS catalog</h2>
       </div>
 
-      <p><strong>{{ $removalInfo.title }}</strong> was removed from the catalog on <strong>{{ $removalInfo.removal_detected_date }}</strong>.</p>
+      {{ $removalTitleDisplay := $removalInfo.title }}
+      {{ if $trademarkBrand }}
+        {{ $removalTitleSuffix := strings.TrimPrefix $trademarkBrand $removalInfo.title }}
+        {{ if eq $removalTitleSuffix $removalInfo.title }}
+          {{ $removalTitleDisplay = printf "%s&trade;" $trademarkBrand }}
+        {{ else }}
+          {{ $removalTitleDisplay = printf "%s&trade;%s" $trademarkBrand $removalTitleSuffix }}
+        {{ end }}
+      {{ end }}
+      <p><strong>{{ $removalTitleDisplay | safeHTML }}</strong> was removed from the catalog on <strong>{{ $removalInfo.removal_detected_date }}</strong>.</p>
 
       {{ with $removalInfo.last_known_metadata }}
         {{ if .reason }}
@@ -499,6 +560,9 @@
           </div>
         {{ end }}
       </div>
+    {{ end }}
+    {{ if $trademarkBrand }}
+      {{ partial "trademark-notice.html" (dict "minio" $trademarkMinio "aistor" $trademarkAistor) }}
     {{ end }}
 
   {{ else }}
